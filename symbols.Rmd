@@ -1,0 +1,80 @@
+---
+title: "a love letter to r and ggplot"
+author: "fred duong"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(grid)
+library(extrafont)
+font_import()
+loadfonts(device = "win")
+
+# gradient function from Kamil Slowikowski
+# https://stackoverflow.com/questions/30136725/plot-background-colour-in-gradient
+make_gradient <- function(deg = 45, n = 100, cols = blues9) {
+  cols <- colorRampPalette(cols)(n + 1)
+  rad <- deg / (180 / pi)
+  mat <- matrix(
+    data = rep(seq(0, 1, length.out = n) * cos(rad), n),
+    byrow = TRUE,
+    ncol = n
+  ) +
+  matrix(
+    data = rep(seq(0, 1, length.out = n) * sin(rad), n),
+    byrow = FALSE,
+    ncol = n
+  )
+  mat <- mat - min(mat)
+  mat <- mat / max(mat)
+  mat <- 1 + mat * n
+  mat <- matrix(data = cols[round(mat)], ncol = n)
+  grid::rasterGrob(
+    image = mat,
+    width = unit(1, "npc"),
+    height = unit(1, "npc"), 
+    interpolate = TRUE
+  )
+}
+```
+
+```{r setup variables}
+# symbols.csv contains hand-selected r and tidyverse syntax
+symbols<-read_csv("symbols.csv", na=character())[[1]] 
+
+# input number of rows and columns desired
+nrows=12
+ncols=9
+
+df<-tibble(x=rep(1:ncols, each=nrows),
+           y=rep(1:nrows, ncols),
+           random=rbinom((ncols*nrows), 1, .3), # generate probability
+           label=ifelse(random==1,              
+                        '+',                    # use probability to display plus sign
+                        # else, display randomly selected symbols when there is no plus sign
+                        sample(symbols, (ncols*nrows), replace=TRUE)
+           )
+)
+
+# make a gradient
+gradient <- make_gradient(deg = 45, n = 500, 
+                          c("#58A9D6", "#947BB1", "#D35768")) #gradient values
+
+```
+
+```{r plot}
+
+ggplot(df, aes(x=x, y=y, label=label)) +
+  
+  annotation_custom(grob = gradient, # gradient background
+                    xmin = -Inf, xmax = Inf, 
+                    ymin = -Inf, ymax = Inf ) + 
+  
+  geom_text(family = "Consolas", color="white", show.legend = FALSE) +
+  theme_void()
+
+ggsave("gradient.png", width=6.5, height=8.5, dpi=300)
+```
+
+
